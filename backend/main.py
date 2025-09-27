@@ -1,6 +1,5 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-import os
 import uvicorn
 from dotenv import load_dotenv
 from gemini_client import GeminiClient
