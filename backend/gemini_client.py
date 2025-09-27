@@ -1,5 +1,6 @@
 import os
 import json
+from typing import List, Dict, Optional
 from dotenv import load_dotenv
 import google.generativeai as genai
 
@@ -36,6 +37,18 @@ class GeminiClient:
             },
         )
 
-    def generate(self, message: str) -> str:
+    def generate(self, message: str, history: Optional[List[Dict]] = None) -> str:
+        if history:
+            gemini_history = []
+            for t in history:
+                u = t.get("user")
+                a = t.get("assistant")
+                if u:
+                    gemini_history.append({"role": "user", "parts": [u]})
+                if a:
+                    gemini_history.append({"role": "model", "parts": [a]})
+            chat = self.model.start_chat(history=gemini_history)
+            r = chat.send_message(message)
+            return r.text or ""
         r = self.model.generate_content(message)
         return r.text or ""

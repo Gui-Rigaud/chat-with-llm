@@ -32,3 +32,6 @@ def append_turn(conversation_id: Optional[str], user_message: str, assistant_mes
         upsert=True,
     )
     return conv_id
+
+def get_conversation(conversation_id: str):
+    return _coll.find_one({"_id": conversation_id}, {"_id": 1, "turns": 1, "created_at": 1})
