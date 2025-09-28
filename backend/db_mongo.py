@@ -7,9 +7,9 @@ from pymongo import MongoClient
 
 load_dotenv()
 
-MONGODB_URI = os.getenv("MONGODB_URI", "mongodb://localhost:27017")
-MONGODB_DB = os.getenv("MONGODB_DB", "clinicai")
-MONGODB_COLLECTION = os.getenv("MONGODB_COLLECTION", "conversations")
+MONGODB_URI = os.getenv("MONGODB_URI")
+MONGODB_DB = "chat"
+MONGODB_COLLECTION = "conversations"
 
 _client = MongoClient(MONGODB_URI)
 _db = _client[MONGODB_DB]
@@ -23,6 +23,12 @@ def append_turn(conversation_id: Optional[str], user_message: str, assistant_mes
         "ts": datetime.now(),
         "meta": metadata or {},
     }
+
+    # Verifica se assistant_message contém palavras-chave para triagem
+    keywords = ["queixa principal", "sintomas detalhados"]
+    if any(keyword in assistant_message.lower() for keyword in keywords):
+        save_triage_summary(conv_id, {"summary": assistant_message})
+    
     _coll.update_one(
         {"_id": conv_id},
         {
@@ -35,3 +41,17 @@ def append_turn(conversation_id: Optional[str], user_message: str, assistant_mes
 
 def get_conversation(conversation_id: str):
     return _coll.find_one({"_id": conversation_id}, {"_id": 1, "turns": 1, "created_at": 1})
+
+def save_triage_summary(conversation_id: str, summary: Dict[str, Any]):
+    _coll = _db["summaries"]
+    _coll.update_one(
+        {"_id": conversation_id},
+        {
+            "$set": {
+                "triage_summary": summary,
+                "finalized_at": datetime.now(),
+            }
+        },
+        upsert=True,
+    )
+    return True
