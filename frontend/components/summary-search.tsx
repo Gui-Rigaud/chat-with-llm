@@ -9,16 +9,14 @@ import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { Search, FileText, Calendar, Clock, AlertCircle, CheckCircle } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import ReactMarkdown from "react-markdown"
+import remarkGfm from "remark-gfm"
 
 interface ConversationSummary {
   id: string
   date: string
-  duration: string
-  mainTopics: string[]
   keyPoints: string[]
-  recommendations: string[]
-  urgencyLevel: "low" | "medium" | "high"
-  followUpNeeded: boolean
+  markdown: string
 }
 
 export function SummarySearch() {
@@ -38,20 +36,32 @@ export function SummarySearch() {
     setSummary(null)
 
     try {
-      const response = await fetch("/api/summary", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ conversationId: conversationId.trim() }),
-      })
+      const url = `http://127.0.0.1:8000/summary?conversationId=${encodeURIComponent(conversationId.trim())}`
+      const response = await fetch(url, { method: "GET" })
 
       if (!response.ok) {
         throw new Error("Conversa não encontrada")
       }
 
       const data = await response.json()
-      setSummary(data)
+      const triageText = typeof data?.triage_summary === "string"
+        ? data.triage_summary
+        : typeof data?.triage_summary?.summary === "string"
+          ? data.triage_summary.summary
+          : ""
+
+      const lines: string[] = triageText
+        .split("\n")
+        .map((l: string) => l.trim())
+        .filter(Boolean)
+
+      const mapped: ConversationSummary = {
+        id: data?._id || conversationId.trim(),
+        date: data?.finalized_at ? new Date(data.finalized_at).toLocaleString("pt-BR") : new Date().toLocaleString("pt-BR"),
+        keyPoints: lines,
+        markdown: triageText,
+      }
+      setSummary(mapped)
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erro ao buscar sumário")
     } finally {
@@ -132,7 +142,6 @@ export function SummarySearch() {
                 </CardTitle>
                 <CardDescription>ID: {summary.id}</CardDescription>
               </div>
-              <Badge variant={getUrgencyColor(summary.urgencyLevel)}>{getUrgencyLabel(summary.urgencyLevel)}</Badge>
             </div>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -142,66 +151,19 @@ export function SummarySearch() {
                 <span className="font-medium">Data:</span>
                 <span>{summary.date}</span>
               </div>
-              <div className="flex items-center gap-2 text-sm">
-                <Clock className="h-4 w-4 text-muted-foreground" />
-                <span className="font-medium">Duração:</span>
-                <span>{summary.duration}</span>
+            </div>
+
+            <div>
+              <h4 className="font-semibold mb-3">Resumo</h4>
+              <div className="text-sm leading-relaxed">
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                  {summary.markdown || summary.keyPoints.join("\n")}
+                </ReactMarkdown>
               </div>
             </div>
 
             <Separator />
 
-            <div>
-              <h4 className="font-semibold mb-3">Principais Tópicos Abordados</h4>
-              <div className="flex flex-wrap gap-2">
-                {summary.mainTopics.map((topic, index) => (
-                  <Badge key={index} variant="outline">
-                    {topic}
-                  </Badge>
-                ))}
-              </div>
-            </div>
-
-            <Separator />
-
-            <div>
-              <h4 className="font-semibold mb-3">Pontos-Chave da Conversa</h4>
-              <ul className="space-y-2">
-                {summary.keyPoints.map((point, index) => (
-                  <li key={index} className="flex items-start gap-2 text-sm">
-                    <CheckCircle className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
-                    <span>{point}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            <Separator />
-
-            <div>
-              <h4 className="font-semibold mb-3">Recomendações</h4>
-              <ul className="space-y-2">
-                {summary.recommendations.map((recommendation, index) => (
-                  <li key={index} className="flex items-start gap-2 text-sm">
-                    <AlertCircle className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
-                    <span>{recommendation}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            {summary.followUpNeeded && (
-              <>
-                <Separator />
-                <Alert>
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>
-                    <strong>Acompanhamento Necessário:</strong> Esta conversa indica a necessidade de acompanhamento
-                    médico profissional.
-                  </AlertDescription>
-                </Alert>
-              </>
-            )}
           </CardContent>
         </Card>
       )}
