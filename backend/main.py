@@ -1,5 +1,6 @@
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel, Field, AliasChoices
 import uvicorn
 from dotenv import load_dotenv
 from gemini_client import GeminiClient
@@ -9,9 +10,17 @@ load_dotenv()
 
 app = FastAPI()
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 class ChatRequest(BaseModel):
-    message: str
-    conversation_id: str | None = None
+    message: str = Field(validation_alias=AliasChoices("message", "content"))
+    conversation_id: str | None = Field(default=None, validation_alias=AliasChoices("conversation_id", "conversationId"))
 
 class ChatResponse(BaseModel):
     reply: str
