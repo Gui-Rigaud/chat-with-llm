@@ -40,15 +40,15 @@ class GeminiClient:
     def generate(self, message: str, history: Optional[List[Dict]] = None) -> str:
         if history:
             gemini_history = []
-            for t in history:
-                u = t.get("user")
-                a = t.get("assistant")
-                if u:
-                    gemini_history.append({"role": "user", "parts": [u]})
-                if a:
-                    gemini_history.append({"role": "model", "parts": [a]})
+            for turn in history:
+                user_message = turn.get("user")
+                assistant_message = turn.get("assistant")
+                if user_message:
+                    gemini_history.append({"role": "user", "parts": [user_message]})
+                if assistant_message:
+                    gemini_history.append({"role": "model", "parts": [assistant_message]})
             chat = self.model.start_chat(history=gemini_history)
-            r = chat.send_message(message)
-            return r.text or ""
-        r = self.model.generate_content(message)
-        return r.text or ""
+            response = chat.send_message(message)
+            return response.text or ""
+        response = self.model.generate_content(message)
+        return response.text or ""
