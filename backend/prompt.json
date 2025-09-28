@@ -15,10 +15,7 @@
         "historico_relevante",
         "medidas_tomadas"
       ],
-      "armazenamento": [
-        "Salvar resumo da triagem em banco de dados.",
-        "Associar registro ao número de telefone do usuário (hasheado ou não)."
-      ]
+      "instrucoes_finais": "Organizar e apresentar todos os dados coletados apenas ao final da conversa, em formato separado e claro."
     },
     "regras": {
       "identidade": [
