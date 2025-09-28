@@ -1,10 +1,10 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field, AliasChoices
 import uvicorn
 from dotenv import load_dotenv
 from gemini_client import GeminiClient
-from db_mongo import append_turn, get_conversation
+from db_mongo import append_turn, get_conversation, get_triage_summary
 
 load_dotenv()
 
@@ -48,6 +48,13 @@ def read_conversation(conversation_id: str):
     doc = get_conversation(conversation_id)
     if not doc:
         raise HTTPException(status_code=404, detail="Conversation not found")
+    return doc
+
+@app.get("/summary")
+def read_summary(conversationId: str = Query(...)):
+    doc = get_triage_summary(conversationId)
+    if not doc:
+        raise HTTPException(status_code=404, detail="Summary not found")
     return doc
 
 if __name__ == "__main__":

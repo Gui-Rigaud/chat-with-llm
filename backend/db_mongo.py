@@ -55,3 +55,6 @@ def save_triage_summary(conversation_id: str, summary: Dict[str, Any]):
         upsert=True,
     )
     return True
+
+def get_triage_summary(conversation_id: str):
+    return _db["summaries"].find_one({"_id": conversation_id}, {"_id": 1, "triage_summary": 1, "finalized_at": 1})
