@@ -8,7 +8,7 @@ import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { Send, Bot, User, Loader2 } from "lucide-react"
+import { Send, Bot, User, Loader2, RefreshCw } from "lucide-react"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 
@@ -26,12 +26,20 @@ export function ChatInterface() {
 
   const scrollAreaRef = useRef<HTMLDivElement>(null)
   const [conversationId, setConversationId] = useState<string | null>(null)
-  const bottomRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     const last = messages[messages.length - 1]
-    if (last?.role === "assistant") {
-      bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" })
+    const viewport = scrollAreaRef.current?.querySelector(
+      '[data-radix-scroll-area-viewport]'
+    ) as HTMLDivElement | null
+    if (viewport) {
+      // ensure DOM is painted before scrolling
+      requestAnimationFrame(() => {
+        viewport.scrollTo({
+          top: viewport.scrollHeight,
+          behavior: last?.role === "assistant" ? "smooth" : "auto",
+        })
+      })
     }
   }, [messages])
 
@@ -100,6 +108,13 @@ export function ChatInterface() {
     setInput(e.target.value)
   }
 
+  const handleRefresh = () => {
+    setIsLoading(false)
+    setMessages([])
+    setConversationId(null)
+    setInput("")
+  }
+
   return (
     <Card className="w-[700px] mx-auto h-[500px] flex flex-col">
       <div className="p-4 border-b bg-muted/30">
@@ -118,6 +133,9 @@ export function ChatInterface() {
               <div className="text-xs text-muted-foreground">ID: {conversationId}</div>
             )}
           </div>
+          <Button variant="ghost" size="icon" onClick={handleRefresh} disabled={isLoading} aria-label="Reiniciar conversa">
+            <RefreshCw className="h-4 w-4" />
+          </Button>
         </div>
       </div>
 
@@ -178,8 +196,6 @@ export function ChatInterface() {
               </div>
             </div>
           )}
-
-          <div ref={bottomRef} />
         </div>
       </ScrollArea>
 
