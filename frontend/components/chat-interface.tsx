@@ -9,6 +9,8 @@ import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Send, Bot, User, Loader2 } from "lucide-react"
+import ReactMarkdown from "react-markdown"
+import remarkGfm from "remark-gfm"
 
 interface Message {
   id: string
@@ -24,10 +26,12 @@ export function ChatInterface() {
 
   const scrollAreaRef = useRef<HTMLDivElement>(null)
   const [conversationId, setConversationId] = useState<string | null>(null)
+  const bottomRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    if (scrollAreaRef.current) {
-      scrollAreaRef.current.scrollTop = scrollAreaRef.current.scrollHeight
+    const last = messages[messages.length - 1]
+    if (last?.role === "assistant") {
+      bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" })
     }
   }, [messages])
 
@@ -97,7 +101,7 @@ export function ChatInterface() {
   }
 
   return (
-    <Card className="w-[700px] mx-auto h-[600px] flex flex-col">
+    <Card className="w-[700px] mx-auto h-[500px] flex flex-col">
       <div className="p-4 border-b bg-muted/30">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -119,9 +123,9 @@ export function ChatInterface() {
 
       <ScrollArea className="flex-1 p-4" ref={scrollAreaRef}>
         <div className="space-y-4">
-          {messages.map((message) => (
-            <div key={message.id} className={`flex gap-3 ${message.role === "user" ? "justify-end" : "justify-start"}`}>
-              {message.role === "assistant" && (
+          {messages.map((msg) => (
+            <div key={msg.id} className={`flex gap-3 ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
+              {msg.role === "assistant" && (
                 <Avatar className="h-8 w-8 mt-1">
                   <AvatarFallback className="bg-primary text-primary-foreground">
                     <Bot className="h-4 w-4" />
@@ -131,19 +135,25 @@ export function ChatInterface() {
 
               <div
                 className={`max-w-[80%] rounded-lg px-4 py-3 ${
-                  message.role === "user" ? "bg-primary text-primary-foreground ml-auto" : "bg-muted"
+                  msg.role === "user" ? "bg-primary text-primary-foreground ml-auto" : "bg-muted"
                 }`}
               >
-                <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
+                <div className="text-sm leading-relaxed break-words whitespace-pre-wrap">
+                  {msg.role === "assistant" ? (
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
+                  ) : (
+                    msg.content
+                  )}
+                </div>
                 <p className="text-xs opacity-70 mt-2">
-                  {message.timestamp.toLocaleTimeString("pt-BR", {
+                  {msg.timestamp.toLocaleTimeString("pt-BR", {
                     hour: "2-digit",
                     minute: "2-digit",
                   })}
                 </p>
               </div>
 
-              {message.role === "user" && (
+              {msg.role === "user" && (
                 <Avatar className="h-8 w-8 mt-1">
                   <AvatarFallback className="bg-secondary">
                     <User className="h-4 w-4" />
@@ -168,6 +178,8 @@ export function ChatInterface() {
               </div>
             </div>
           )}
+
+          <div ref={bottomRef} />
         </div>
       </ScrollArea>
 
