@@ -8,7 +8,7 @@ import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { Send, Bot, User, Loader2 } from "lucide-react"
+import { Send, Bot, User, Loader2, RefreshCw } from "lucide-react"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 
@@ -25,19 +25,31 @@ export function ChatInterface() {
   const [isLoading, setIsLoading] = useState(false)
 
   const scrollAreaRef = useRef<HTMLDivElement>(null)
-  const [conversationId, setConversationId] = useState<string | null>(null)
-  const bottomRef = useRef<HTMLDivElement>(null)
+  const [phoneNumber, setPhoneNumber] = useState<string>("")
 
   useEffect(() => {
     const last = messages[messages.length - 1]
-    if (last?.role === "assistant") {
-      bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" })
+    const viewport = scrollAreaRef.current?.querySelector(
+      '[data-radix-scroll-area-viewport]'
+    ) as HTMLDivElement | null
+    if (viewport) {
+      // ensure DOM is painted before scrolling
+      requestAnimationFrame(() => {
+        viewport.scrollTo({
+          top: viewport.scrollHeight,
+          behavior: last?.role === "assistant" ? "smooth" : "auto",
+        })
+      })
     }
   }, [messages])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!input.trim() || isLoading) return
+    if (!phoneNumber.trim()) {
+      // require phone number for identification
+      return
+    }
 
     const userMessage: Message = {
       id: `user_${Date.now()}`,
@@ -51,9 +63,7 @@ export function ChatInterface() {
     setIsLoading(true)
 
     try {
-      const payload = conversationId
-        ? { message: userMessage.content, conversation_id: conversationId }
-        : { message: userMessage.content }
+      const payload = { message: userMessage.content, phone_number: phoneNumber.trim() }
 
       const response = await fetch("http://127.0.0.1:8000/chat", {
         method: "POST",
@@ -69,8 +79,9 @@ export function ChatInterface() {
 
       const data = await response.json()
 
-      if (data.conversation_id) {
-        setConversationId(data.conversation_id)
+      // backend echoes phone_number; keep local if provided
+      if (data.phone_number && typeof data.phone_number === "string") {
+        setPhoneNumber(data.phone_number)
       }
 
       const assistantMessage: Message = {
@@ -100,6 +111,13 @@ export function ChatInterface() {
     setInput(e.target.value)
   }
 
+  const handleRefresh = () => {
+    setIsLoading(false)
+    setMessages([])
+    setInput("")
+    // keep phone number so the session continues for this client
+  }
+
   return (
     <Card className="w-[700px] mx-auto h-[500px] flex flex-col">
       <div className="p-4 border-b bg-muted/30">
@@ -114,10 +132,20 @@ export function ChatInterface() {
               <h3 className="font-semibold text-sm">RigaudChat</h3>
               <p className="text-xs text-muted-foreground">Agente Virtual de Saúde</p>
             </div>
-            {conversationId && (
-              <div className="text-xs text-muted-foreground">ID: {conversationId}</div>
-            )}
+            {/* phone number identification */}
+            <div className="flex items-center gap-2 ml-4">
+              <span className="text-xs text-muted-foreground">Telefone:</span>
+              <Input
+                value={phoneNumber}
+                onChange={(e) => setPhoneNumber(e.target.value)}
+                placeholder="Ex: +5511999999999"
+                className="h-7 w-48 text-xs"
+              />
+            </div>
           </div>
+          <Button variant="ghost" size="icon" onClick={handleRefresh} disabled={isLoading} aria-label="Reiniciar conversa">
+            <RefreshCw className="h-4 w-4" />
+          </Button>
         </div>
       </div>
 
@@ -178,8 +206,6 @@ export function ChatInterface() {
               </div>
             </div>
           )}
-
-          <div ref={bottomRef} />
         </div>
       </ScrollArea>
 
@@ -193,7 +219,7 @@ export function ChatInterface() {
             className="flex-1"
             autoFocus
           />
-          <Button type="submit" disabled={isLoading || !input.trim()}>
+          <Button type="submit" disabled={isLoading || !input.trim() || !phoneNumber.trim()}>
             <Send className="h-4 w-4" />
             <span className="sr-only">Enviar mensagem</span>
           </Button>

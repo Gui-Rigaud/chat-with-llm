@@ -5,9 +5,8 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
-import { Search, FileText, Calendar, Clock, AlertCircle, CheckCircle } from "lucide-react"
+import { Search, FileText, Calendar, AlertCircle } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
@@ -20,14 +19,14 @@ interface ConversationSummary {
 }
 
 export function SummarySearch() {
-  const [conversationId, setConversationId] = useState("")
+  const [phoneNumber, setPhoneNumber] = useState("")
   const [summary, setSummary] = useState<ConversationSummary | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
 
   const handleSearch = async () => {
-    if (!conversationId.trim()) {
-      setError("Por favor, digite um ID de conversa válido")
+    if (!phoneNumber.trim()) {
+      setError("Por favor, digite um número de telefone válido")
       return
     }
 
@@ -36,7 +35,7 @@ export function SummarySearch() {
     setSummary(null)
 
     try {
-      const url = `http://127.0.0.1:8000/summary?conversationId=${encodeURIComponent(conversationId.trim())}`
+      const url = `http://127.0.0.1:8000/summary?phoneNumber=${encodeURIComponent(phoneNumber.trim())}`
       const response = await fetch(url, { method: "GET" })
 
       if (!response.ok) {
@@ -56,7 +55,7 @@ export function SummarySearch() {
         .filter(Boolean)
 
       const mapped: ConversationSummary = {
-        id: data?._id || conversationId.trim(),
+        id: data?._id || phoneNumber.trim(),
         date: data?.finalized_at ? new Date(data.finalized_at).toLocaleString("pt-BR") : new Date().toLocaleString("pt-BR"),
         keyPoints: lines,
         markdown: triageText,
@@ -69,32 +68,6 @@ export function SummarySearch() {
     }
   }
 
-  const getUrgencyColor = (level: string) => {
-    switch (level) {
-      case "high":
-        return "destructive"
-      case "medium":
-        return "default"
-      case "low":
-        return "secondary"
-      default:
-        return "secondary"
-    }
-  }
-
-  const getUrgencyLabel = (level: string) => {
-    switch (level) {
-      case "high":
-        return "Alta Prioridade"
-      case "medium":
-        return "Prioridade Média"
-      case "low":
-        return "Baixa Prioridade"
-      default:
-        return "Não Definida"
-    }
-  }
-
   return (
     <div className="space-y-6">
       <Card>
@@ -103,17 +76,17 @@ export function SummarySearch() {
             <Search className="h-5 w-5" />
             Buscar Conversa
           </CardTitle>
-          <CardDescription>Digite o ID da conversa para gerar um sumário detalhado</CardDescription>
+          <CardDescription>Digite o número de telefone para gerar um sumário detalhado</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="conversation-id">ID da Conversa</Label>
+            <Label htmlFor="phone-number">Número de telefone</Label>
             <div className="flex gap-2">
               <Input
-                id="conversation-id"
-                placeholder="Ex: conv_1234567890_abc123"
-                value={conversationId}
-                onChange={(e) => setConversationId(e.target.value)}
+                id="phone-number"
+                placeholder="Ex: +5511999999999"
+                value={phoneNumber}
+                onChange={(e) => setPhoneNumber(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleSearch()}
               />
               <Button onClick={handleSearch} disabled={isLoading}>
@@ -140,7 +113,7 @@ export function SummarySearch() {
                   <FileText className="h-5 w-5" />
                   Sumário da Conversa
                 </CardTitle>
-                <CardDescription>ID: {summary.id}</CardDescription>
+                <CardDescription>Telefone: {summary.id}</CardDescription>
               </div>
             </div>
           </CardHeader>

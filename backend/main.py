@@ -20,39 +20,38 @@ app.add_middleware(
 
 class ChatRequest(BaseModel):
     message: str = Field(validation_alias=AliasChoices("message", "content"))
-    conversation_id: str | None = Field(default=None, validation_alias=AliasChoices("conversation_id", "conversationId"))
+    phone_number: str = Field(validation_alias=AliasChoices("phone_number", "phoneNumber"))
 
 class ChatResponse(BaseModel):
     reply: str
-    conversation_id: str
+    phone_number: str
 
 @app.post("/chat", response_model=ChatResponse)
 def chat(req: ChatRequest):
     try:
         client = GeminiClient()
         history = None
-        if req.conversation_id:
-            doc = get_conversation(req.conversation_id)
-            if doc and "turns" in doc:
-                history = doc["turns"]
+        doc = get_conversation(req.phone_number)
+        if doc and "turns" in doc:
+            history = doc["turns"]
         text = client.generate(req.message, history=history)
-        conv_id = append_turn(req.conversation_id, req.message, text)
-        return {"reply": text, "conversation_id": conv_id}
+        append_turn(req.phone_number, req.message, text)
+        return {"reply": text, "phone_number": req.phone_number}
     except ValueError as ve:
         raise HTTPException(status_code=500, detail=str(ve))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/conversations/{conversation_id}")
-def read_conversation(conversation_id: str):
-    doc = get_conversation(conversation_id)
+@app.get("/conversations/{phone_number}")
+def read_conversation(phone_number: str):
+    doc = get_conversation(phone_number)
     if not doc:
         raise HTTPException(status_code=404, detail="Conversation not found")
     return doc
 
 @app.get("/summary")
-def read_summary(conversationId: str = Query(...)):
-    doc = get_triage_summary(conversationId)
+def read_summary(phone_number: str = Query(..., alias="phoneNumber")):
+    doc = get_triage_summary(phone_number)
     if not doc:
         raise HTTPException(status_code=404, detail="Summary not found")
     return doc
